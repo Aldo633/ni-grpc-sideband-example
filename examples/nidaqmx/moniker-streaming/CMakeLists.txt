@@ -15,7 +15,7 @@ message(STATUS "Using gRPC ${gRPC_VERSION}")
 set(_GRPC_GRPCPP gRPC::grpc++)
 find_program(_GRPC_CPP_PLUGIN_EXECUTABLE grpc_cpp_plugin)
 
-set(SIDEBAND_BUILD_DIR "${CMAKE_SOURCE_DIR}/../../../sideband/build")
+set(SIDEBAND_BUILD_DIR "${CMAKE_SOURCE_DIR}/../../../sideband/sideband-build")
 message(STATUS "SIDEBAND_BUILD_DIR: ${SIDEBAND_BUILD_DIR}")
 
 
@@ -92,13 +92,5 @@ target_link_libraries(MonikerStreamingClient
 
 
 
-    # --- Sideband library and headers (from /root/sideband/build) ---
-# Path to the sideband build containing headers and the shared library.
-
-
-# Add the sideband headers so code can #include "sideband_grpc.h" and friends.
-
-
-# Locate the sideband shared library (libni_grpc_sideband.so) in the build dir.
 
 
