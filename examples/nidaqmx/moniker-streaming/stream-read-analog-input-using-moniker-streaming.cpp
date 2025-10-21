@@ -117,27 +117,27 @@ void print_array(const MonikerReadAnalogF64Response& data)
     client.CreateAIVoltageChan(&create_channel_context, create_channel_request, &create_channel_response),
     create_channel_context);
 
-  ::grpc::ClientContext cfg_clk_context;
-  auto cfg_clk_request = CfgSampClkTimingRequest{};
-  cfg_clk_request.mutable_task()->CopyFrom(daqmx_read_task);
-  cfg_clk_request.set_rate(100.0);
-  cfg_clk_request.set_active_edge(Edge1::EDGE1_RISING);
-  cfg_clk_request.set_sample_mode(AcquisitionType::ACQUISITION_TYPE_HW_TIMED_SINGLE_POINT);
-  cfg_clk_request.set_samps_per_chan(10);
-  auto cfg_clk_response = CfgSampClkTimingResponse{};
-  raise_if_error(
-    client.CfgSampClkTiming(&cfg_clk_context, cfg_clk_request, &cfg_clk_response),
-    cfg_clk_context);
+  // ::grpc::ClientContext cfg_clk_context;
+  // auto cfg_clk_request = CfgSampClkTimingRequest{};
+  // cfg_clk_request.mutable_task()->CopyFrom(daqmx_read_task);
+  // cfg_clk_request.set_rate(100.0);
+  // cfg_clk_request.set_active_edge(Edge1::EDGE1_RISING);
+  // cfg_clk_request.set_sample_mode(AcquisitionType::ACQUISITION_TYPE_HW_TIMED_SINGLE_POINT);
+  // cfg_clk_request.set_samps_per_chan(10);
+  // auto cfg_clk_response = CfgSampClkTimingResponse{};
+  // raise_if_error(
+  //   client.CfgSampClkTiming(&cfg_clk_context, cfg_clk_request, &cfg_clk_response),
+  //   cfg_clk_context);
 
-  ::grpc::ClientContext set_read_attribute_context;
-  auto set_read_attribute_request = SetReadAttributeInt32Request{};
-  set_read_attribute_request.mutable_task()->CopyFrom(daqmx_read_task);
-  set_read_attribute_request.set_attribute(ReadInt32Attribute::READ_ATTRIBUTE_WAIT_MODE);
-  set_read_attribute_request.set_value(ReadInt32AttributeValues::READ_INT32_WAIT_MODE_POLL);
-  auto set_read_attribute_response = SetReadAttributeInt32Response{};
-  raise_if_error(
-    client.SetReadAttributeInt32(&set_read_attribute_context, set_read_attribute_request, &set_read_attribute_response),
-    set_read_attribute_context);
+  // ::grpc::ClientContext set_read_attribute_context;
+  // auto set_read_attribute_request = SetReadAttributeInt32Request{};
+  // set_read_attribute_request.mutable_task()->CopyFrom(daqmx_read_task);
+  // set_read_attribute_request.set_attribute(ReadInt32Attribute::READ_ATTRIBUTE_WAIT_MODE);
+  // set_read_attribute_request.set_value(ReadInt32AttributeValues::READ_INT32_WAIT_MODE_POLL);
+  // auto set_read_attribute_response = SetReadAttributeInt32Response{};
+  // raise_if_error(
+  //   client.SetReadAttributeInt32(&set_read_attribute_context, set_read_attribute_request, &set_read_attribute_response),
+  //   set_read_attribute_context);
 
   ::grpc::ClientContext start_task_context;
   StartTaskRequest start_task_request;
@@ -167,16 +167,18 @@ int main(int argc, char **argv)
   ni::data_monikers::DataMoniker::Stub moniker_service(channel);
 
   try {
+    std::cout << "PHYSICAL_CHANNEL: " << PHYSICAL_CHANNEL << std::endl;
+
     auto daqmx_read_task = create_and_configure_read_task(client, PHYSICAL_CHANNEL);
 
     // Setup the read stream
     ::grpc::ClientContext begin_read_context;
     auto begin_read_request = BeginReadAnalogF64Request{};
     begin_read_request.mutable_task()->CopyFrom(daqmx_read_task);
-    begin_read_request.set_num_samps_per_chan(10);
+    begin_read_request.set_num_samps_per_chan(1);
     begin_read_request.set_timeout(10.0);
     begin_read_request.set_fill_mode(GroupBy::GROUP_BY_GROUP_BY_CHANNEL);
-    begin_read_request.set_array_size_in_samps(10);
+    begin_read_request.set_array_size_in_samps(1);
     auto begin_read_response = BeginReadAnalogF64Response{};
     raise_if_error(
       client.BeginReadAnalogF64(&begin_read_context, begin_read_request, &begin_read_response),

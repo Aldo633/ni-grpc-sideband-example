@@ -91,8 +91,10 @@ inline void raise_if_error(const ::grpc::Status& status, const ::grpc::ClientCon
 
 void print_array(const MonikerReadAnalogF64Response& data)
 {
+  
+  std::cout << "Array Size: " << data.read_array().size() << " ";
   std::cout << "[";
-  for (int i = 0; i < data.read_array().size(); i++) {
+    for (int i = 0; i < data.read_array().size(); i++) {
     std::cout << data.read_array().Get(i) << " ";
   }
   std::cout << "]" << std::endl;
@@ -230,12 +232,12 @@ int main(int argc, char **argv)
   auto target_str = SERVER_ADDRESS + ":" + SERVER_PORT;
   auto moniker_target_str = SERVER_ADDRESS + ":" + MONIKER_SERVER_PORT;
   auto channel = grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials());
-  auto moniker_channel = grpc::CreateChannel(moniker_target_str, grpc::InsecureChannelCredentials());
   NiDAQmx::Stub client(channel);
-  ni::data_monikers::DataMoniker::Stub moniker_service(moniker_channel);
+  ni::data_monikers::DataMoniker::Stub moniker_service(channel);
 
   try {
-    
+
+   
     std::vector<double> write_data_float64 = {1.0};
     std::cout << "Set up Read" << std::endl;
     auto daqmx_read_task = create_and_configure_read_task(client, PHYSICAL_CHANNEL_READ);
@@ -250,6 +252,7 @@ int main(int argc, char **argv)
     begin_read_request.mutable_task()->CopyFrom(daqmx_read_task);
     begin_read_request.set_num_samps_per_chan(1);
     begin_read_request.set_timeout(10.0);
+    begin_read_request.set_array_size_in_samps(1);
     begin_read_request.set_fill_mode(GroupBy::GROUP_BY_GROUP_BY_CHANNEL);
         auto begin_read_response = BeginReadAnalogF64Response{};
     raise_if_error(
@@ -273,6 +276,7 @@ int main(int argc, char **argv)
   begin_write_request.set_num_samps_per_chan(1);
   begin_write_request.set_timeout(10.0);
   begin_write_request.set_data_layout(GroupBy::GROUP_BY_GROUP_BY_CHANNEL);
+  begin_read_request.set_array_size_in_samps(1);
     auto begin_write_response = BeginWriteAnalogF64Response{};
     raise_if_error(
       client.BeginWriteAnalogF64(&begin_write_context, begin_write_request, &begin_write_response),
@@ -324,8 +328,10 @@ int main(int argc, char **argv)
       MonikerReadAnalogF64Response read_analog_f64_response;
       ni::data_monikers::SidebandReadResponse read_result;
       ReadSidebandMessage(sideband_token, &read_result);
-      read_result.values().values(0).UnpackTo(&read_analog_f64_response);
-
+      auto status = read_result.values().values(0).UnpackTo(&read_analog_f64_response);
+   
+        std::cout << "Status of Unpack" << status << std::endl;
+  
       std::cout << "Read data..." << std::endl;
       print_array(read_analog_f64_response);
       
