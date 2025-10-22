@@ -51,8 +51,8 @@ using StubPtr = std::unique_ptr<NiDAQmx::Stub>;
 std::string SERVER_ADDRESS = "localhost";
 std::string SERVER_PORT = "31763";
 std::string MONIKER_SERVER_PORT = "50055";
-std::string PHYSICAL_CHANNEL_READ = "Dev1/ai0";
-std::string PHYSICAL_CHANNEL_WRITE = "Dev1/ao0";
+std::string PHYSICAL_CHANNEL_READ = "Dev1/ai0:7";
+std::string PHYSICAL_CHANNEL_WRITE = "Dev1/ao0:7";
 int NUM_ITERATIONS = 5;
 
 class grpc_driver_error : public std::runtime_error {
@@ -238,7 +238,7 @@ int main(int argc, char **argv)
   try {
 
    
-    std::vector<double> write_data_float64 = {1.0};
+    std::vector<double> write_data_float64 = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
     std::cout << "Set up Read" << std::endl;
     auto daqmx_read_task = create_and_configure_read_task(client, PHYSICAL_CHANNEL_READ);
 
@@ -252,7 +252,7 @@ int main(int argc, char **argv)
     begin_read_request.mutable_task()->CopyFrom(daqmx_read_task);
     begin_read_request.set_num_samps_per_chan(1);
     begin_read_request.set_timeout(10.0);
-    begin_read_request.set_array_size_in_samps(1);
+    begin_read_request.set_array_size_in_samps(1*8);
     begin_read_request.set_fill_mode(GroupBy::GROUP_BY_GROUP_BY_CHANNEL);
         auto begin_read_response = BeginReadAnalogF64Response{};
     raise_if_error(
@@ -276,7 +276,6 @@ int main(int argc, char **argv)
   begin_write_request.set_num_samps_per_chan(1);
   begin_write_request.set_timeout(10.0);
   begin_write_request.set_data_layout(GroupBy::GROUP_BY_GROUP_BY_CHANNEL);
-  begin_read_request.set_array_size_in_samps(1);
     auto begin_write_response = BeginWriteAnalogF64Response{};
     raise_if_error(
       client.BeginWriteAnalogF64(&begin_write_context, begin_write_request, &begin_write_response),
@@ -301,7 +300,7 @@ int main(int argc, char **argv)
     grpc::ClientContext moniker_context;
     ni::data_monikers::BeginMonikerSidebandStreamRequest sideband_request;
     ni::data_monikers::BeginMonikerSidebandStreamResponse sideband_response;
-    sideband_request.set_strategy(ni::data_monikers::SidebandStrategy::SOCKETS);
+    sideband_request.set_strategy(ni::data_monikers::SidebandStrategy::SOCKETS_LOW_LATENCY);
     sideband_request.mutable_monikers()->mutable_read_monikers()->AddAllocated(daqmx_read_moniker);
     sideband_request.mutable_monikers()->mutable_write_monikers()->AddAllocated(daqmx_write_moniker);
     auto write_stream = moniker_service.BeginSidebandStream(&moniker_context, sideband_request, &sideband_response);
