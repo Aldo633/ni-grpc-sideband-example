@@ -53,6 +53,9 @@ std::string SERVER_PORT = "31763";
 std::string MONIKER_SERVER_PORT = "50055";
 std::string PHYSICAL_CHANNEL_READ = "Dev1/ai0:7";
 std::string PHYSICAL_CHANNEL_WRITE = "Dev1/ao0:7";
+std::string BASE_READ = "PxiSlot";
+std::string BASE_WRITE = "PxiSlot";
+int NUM_CHANNELS = 1;
 int NUM_ITERATIONS = 5;
 
 class grpc_driver_error : public std::runtime_error {
@@ -224,13 +227,37 @@ int main(int argc, char **argv)
     MONIKER_SERVER_PORT = argv[3];
   }
   if (argc >= 5) {
-    PHYSICAL_CHANNEL_READ = argv[4 ];
+    BASE_READ = argv[4];
   }
   if (argc >= 6) {
-    PHYSICAL_CHANNEL_WRITE = argv[5];
+    BASE_WRITE = argv[5];
+  }
+  if (argc >= 7) {
+    NUM_CHANNELS = std::stoi(argv[6]);
+  }
+
+  if (NUM_CHANNELS < 1 || NUM_CHANNELS > 8) {
+    std::cout << "Warning: Number of channels (" << NUM_CHANNELS << ") is out of range (1-8). Setting to 1.\n";
+    NUM_CHANNELS = 1;
+  }
+
+  if (NUM_CHANNELS == 1) {
+    PHYSICAL_CHANNEL_READ = BASE_READ + "/ai0";
+    PHYSICAL_CHANNEL_WRITE = BASE_WRITE + "/ao0";
+  } else {
+      PHYSICAL_CHANNEL_READ = BASE_READ + "/ai0:" + std::to_string(NUM_CHANNELS - 1);
+      PHYSICAL_CHANNEL_WRITE = BASE_WRITE + "/ao0:" + std::to_string(NUM_CHANNELS - 1);
   }
   auto target_str = SERVER_ADDRESS + ":" + SERVER_PORT;
   auto moniker_target_str = SERVER_ADDRESS + ":" + MONIKER_SERVER_PORT;
+
+  std::cout << "Configuration:\n";
+  std::cout << "  Server: " << target_str << "\n";
+  std::cout << "  Moniker Server: " << moniker_target_str << "\n";
+  std::cout << "  Number of channels: " << NUM_CHANNELS << "\n";
+  std::cout << "  Read channel: " << PHYSICAL_CHANNEL_READ << "\n";
+  std::cout << "  Write channel: " << PHYSICAL_CHANNEL_WRITE << "\n";
+
   auto channel = grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials());
   NiDAQmx::Stub client(channel);
   ni::data_monikers::DataMoniker::Stub moniker_service(channel);
@@ -238,7 +265,7 @@ int main(int argc, char **argv)
   try {
 
    
-    std::vector<double> write_data_float64 = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+    std::vector<double> write_data_float64(NUM_CHANNELS, 1.0);
     std::cout << "Set up Read" << std::endl;
     auto daqmx_read_task = create_and_configure_read_task(client, PHYSICAL_CHANNEL_READ);
 
@@ -252,7 +279,7 @@ int main(int argc, char **argv)
     begin_read_request.mutable_task()->CopyFrom(daqmx_read_task);
     begin_read_request.set_num_samps_per_chan(1);
     begin_read_request.set_timeout(10.0);
-    begin_read_request.set_array_size_in_samps(1*8);
+    begin_read_request.set_array_size_in_samps(1*NUM_CHANNELS);
     begin_read_request.set_fill_mode(GroupBy::GROUP_BY_GROUP_BY_CHANNEL);
         auto begin_read_response = BeginReadAnalogF64Response{};
     raise_if_error(
