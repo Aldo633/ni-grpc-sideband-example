@@ -50,11 +50,10 @@ using StubPtr = std::unique_ptr<NiDAQmx::Stub>;
 
 std::string SERVER_ADDRESS = "localhost";
 std::string SERVER_PORT = "31763";
-std::string MONIKER_SERVER_PORT = "50055";
 std::string PHYSICAL_CHANNEL_READ = "Dev1/ai0:7";
 std::string PHYSICAL_CHANNEL_WRITE = "Dev1/ao0:7";
-std::string BASE_READ = "PxiSlot";
-std::string BASE_WRITE = "PxiSlot";
+std::string READ_DEVICE = "Dev1";
+std::string WRITE_DEVICE = "Dev1";
 int NUM_CHANNELS = 1;
 int NUM_ITERATIONS = 5;
 
@@ -224,16 +223,13 @@ int main(int argc, char **argv)
     SERVER_PORT = argv[2];
   }
   if (argc >= 4) {
-    MONIKER_SERVER_PORT = argv[3];
+    READ_DEVICE = argv[3];
   }
   if (argc >= 5) {
-    BASE_READ = argv[4];
+    WRITE_DEVICE = argv[4];
   }
   if (argc >= 6) {
-    BASE_WRITE = argv[5];
-  }
-  if (argc >= 7) {
-    NUM_CHANNELS = std::stoi(argv[6]);
+    NUM_CHANNELS = std::stoi(argv[5]);
   }
 
   if (NUM_CHANNELS < 1 || NUM_CHANNELS > 8) {
@@ -242,18 +238,16 @@ int main(int argc, char **argv)
   }
 
   if (NUM_CHANNELS == 1) {
-    PHYSICAL_CHANNEL_READ = BASE_READ + "/ai0";
-    PHYSICAL_CHANNEL_WRITE = BASE_WRITE + "/ao0";
+    PHYSICAL_CHANNEL_READ = READ_DEVICE + "/ai0";
+    PHYSICAL_CHANNEL_WRITE = WRITE_DEVICE + "/ao0";
   } else {
-      PHYSICAL_CHANNEL_READ = BASE_READ + "/ai0:" + std::to_string(NUM_CHANNELS - 1);
-      PHYSICAL_CHANNEL_WRITE = BASE_WRITE + "/ao0:" + std::to_string(NUM_CHANNELS - 1);
+      PHYSICAL_CHANNEL_READ = READ_DEVICE + "/ai0:" + std::to_string(NUM_CHANNELS - 1);
+      PHYSICAL_CHANNEL_WRITE = WRITE_DEVICE + "/ao0:" + std::to_string(NUM_CHANNELS - 1);
   }
   auto target_str = SERVER_ADDRESS + ":" + SERVER_PORT;
-  auto moniker_target_str = SERVER_ADDRESS + ":" + MONIKER_SERVER_PORT;
 
   std::cout << "Configuration:\n";
   std::cout << "  Server: " << target_str << "\n";
-  std::cout << "  Moniker Server: " << moniker_target_str << "\n";
   std::cout << "  Number of channels: " << NUM_CHANNELS << "\n";
   std::cout << "  Read channel: " << PHYSICAL_CHANNEL_READ << "\n";
   std::cout << "  Write channel: " << PHYSICAL_CHANNEL_WRITE << "\n";
