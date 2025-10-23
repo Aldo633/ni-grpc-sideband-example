@@ -232,11 +232,6 @@ int main(int argc, char **argv)
     NUM_CHANNELS = std::stoi(argv[5]);
   }
 
-  if (NUM_CHANNELS < 1 || NUM_CHANNELS > 8) {
-    std::cout << "Warning: Number of channels (" << NUM_CHANNELS << ") is out of range (1-8). Setting to 1.\n";
-    NUM_CHANNELS = 1;
-  }
-
   if (NUM_CHANNELS == 1) {
     PHYSICAL_CHANNEL_READ = READ_DEVICE + "/ai0";
     PHYSICAL_CHANNEL_WRITE = WRITE_DEVICE + "/ao0";
