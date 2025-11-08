@@ -162,29 +162,7 @@ int main(int argc, char **argv)
     std::cout << "Set up FPGA Bitfile" << std::endl;
     auto fpga_task = create_and_configure_fpga_task(fpga_client, FPGA_RESOURCE);
 
-    
-
-
-
-    //ni::data_monikers::Moniker* fpga_write_array_moniker = new ni::data_monikers::Moniker();
-    /*fpga_client.BeginWriteArrayI64(fpga_session,
-                                   NiFpga_FPGA_Read_Write_Array_Loop_ControlArrayI64_write_i64,
-                                   NiFpga_FPGA_Read_Write_Array_Loop_ControlArrayI64Size_write_i64,
-                                   fpga_write_array_moniker);*/
-
-    //ni::data_monikers::Moniker* fpga_write_moniker = new ni::data_monikers::Moniker();
-    /*fpga_client.BeginWriteI64(fpga_session,
-                            NiFpga_FPGA_Read_Write_Array_Loop_ControlI64_add_i64,
-                            fpga_write_moniker);
-
-    /*ni::data_monikers::Moniker* fpga_read_moniker = new ni::data_monikers::Moniker();
-    fpga_client.BeginReadArrayI64(fpga_session,
-                                  NiFpga_FPGA_Read_Write_Array_Loop_IndicatorArrayI64_read_i64,
-                                  NiFpga_FPGA_Read_Write_Array_Loop_IndicatorArrayI64Size_read_i64,
-                                  fpga_read_moniker);*/
-
-    //std::cout << "FPGA setup complete" << std::endl;
-
+  
 
     // Setup the read moniker
     std::cout << "Set up Read Array Moniker" << std::endl;
