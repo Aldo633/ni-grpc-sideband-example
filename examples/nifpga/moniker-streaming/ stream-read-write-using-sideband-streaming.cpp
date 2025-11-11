@@ -39,6 +39,7 @@
 
 #include "nifpga.grpc.pb.h"
 #include "data_moniker.grpc.pb.h"
+#include "NIFPGABitfileHeader.h"
 
 using namespace nifpga_grpc;
 using StubPtr = std::unique_ptr<NiFpga::Stub>;
@@ -47,10 +48,11 @@ using StubPtr = std::unique_ptr<NiFpga::Stub>;
 std::string SERVER_ADDRESS = "localhost";
 std::string SERVER_PORT = "31763";
 std::string FPGA_RESOURCE = "RIO0";
-std::string BITFILE_PATH = "/home/admin/PXIe-7842R.lvbitx";
-std::string NI_FPGA_EXAMPLE_SIGNATURE = "11F1FF1D11F1FF1F1F111FF11F11F111";
-int EXAMPLE_ARRAY_CONTROL = 0x10004;
-int EXAMPLE_ARRAY_CONTROL_SIZE = 4;
+std::string BITFILE_PATH = NiFpga_FPGA_Main_Bitfile;
+std::string NI_FPGA_EXAMPLE_SIGNATURE = NiFpga_FPGA_Main_Signature;
+int EXAMPLE_ARRAY_INDICATOR = NiFpga_FPGA_Main_IndicatorArrayI64_AIs;
+int EXAMPLE_ARRAY_INDICATOR_SIZE = NiFpga_FPGA_Main_IndicatorArrayI64Size_AIs;
+int EXAMPLE_CONTROL = NiFpga_FPGA_Main_ControlU8_Connector0Port_0;
 
 int NUM_ITERATIONS = 5;
 
@@ -101,15 +103,16 @@ void print_array(const MonikerReadArrayI64Response& data)
   std::cout << "]" << std::endl;
 }
 
-::nidevice_grpc::Session create_and_configure_fpga_task(NiFpga::Stub &client, const std::string &FPGA_RESOURCE)
+::nidevice_grpc::Session create_and_configure_fpga_task(NiFpga::Stub &client, const std::string &FPGA_RESOURCE, const std::string &fpga_bitfile_path)
 {
 
+    
   
     
     ::grpc::ClientContext fpga_open_context;
     auto fpga_open_request = OpenRequest{};
     fpga_open_request.set_session_name("my fpga session");
-    fpga_open_request.set_bitfile(BITFILE_PATH);
+    fpga_open_request.set_bitfile(fpga_bitfile_path);
     fpga_open_request.set_signature(NI_FPGA_EXAMPLE_SIGNATURE);
     fpga_open_request.set_resource(FPGA_RESOURCE);
     fpga_open_request.set_attribute_mapped(OpenAttribute::OPEN_ATTRIBUTE_NO_RUN);
@@ -118,14 +121,17 @@ void print_array(const MonikerReadArrayI64Response& data)
       client.Open(&fpga_open_context, fpga_open_request, &fpga_open_response),
       fpga_open_context);
     auto fpga_task = fpga_open_response.session();
+    std::cout << "FPGA opened with status: " << fpga_open_response.status() << std::endl;
 
     ::grpc::ClientContext fpga_run_context;
     auto fpga_run_request = RunRequest{};
     fpga_run_request.mutable_session()->CopyFrom(fpga_task);
+    fpga_run_request.set_attribute(RunAttribute::RUN_ATTRIBUTE_UNSPECIFIED);
     auto fpga_run_response = RunResponse{};
     raise_if_error(
       client.Run(&fpga_run_context, fpga_run_request, &fpga_run_response),
-      fpga_run_context);    
+      fpga_run_context);
+    std::cout << "FPGA run with status: " << fpga_run_response.status() << std::endl;
 
   return fpga_task;
 }
@@ -143,10 +149,12 @@ int main(int argc, char **argv)
   }
 
   auto target_str = SERVER_ADDRESS + ":" + SERVER_PORT;
+  auto fpga_bitfile_path = "/home/admin/FPGA_Bitfiles/" + BITFILE_PATH; // Adjust path as necessary - The bitfile needs to be manually moved to the server machine
+  
 
   std::cout << "Configuration:\n";
   std::cout << "  Server: " << target_str << "\n";
-  
+  std::cout << "  FPGA Bitfile: " << fpga_bitfile_path << "\n";
 
 
   // Create gRPC channel - Connect to server
@@ -159,8 +167,9 @@ int main(int argc, char **argv)
 
 
     std::vector<int64_t> write_data_i64(8, 1);
+    int32_t write_data_u8 = 0xFF;
     std::cout << "Set up FPGA Bitfile" << std::endl;
-    auto fpga_task = create_and_configure_fpga_task(fpga_client, FPGA_RESOURCE);
+    auto fpga_task = create_and_configure_fpga_task(fpga_client, FPGA_RESOURCE, fpga_bitfile_path);
 
   
 
@@ -169,8 +178,8 @@ int main(int argc, char **argv)
     ::grpc::ClientContext begin_read_array_i64_context;
     auto begin_read_array_i64_request = BeginReadArrayI64Request{};
     begin_read_array_i64_request.mutable_session()->CopyFrom(fpga_task);
-    begin_read_array_i64_request.set_indicator(EXAMPLE_ARRAY_CONTROL);
-    begin_read_array_i64_request.set_size(EXAMPLE_ARRAY_CONTROL_SIZE);
+    begin_read_array_i64_request.set_indicator(EXAMPLE_ARRAY_INDICATOR);
+    begin_read_array_i64_request.set_size(EXAMPLE_ARRAY_INDICATOR_SIZE);
     auto begin_read_array_i64_response = BeginReadArrayI64Response{};
     raise_if_error(
       fpga_client.BeginReadArrayI64(&begin_read_array_i64_context, begin_read_array_i64_request, &begin_read_array_i64_response),
@@ -179,17 +188,30 @@ int main(int argc, char **argv)
     
 
 
-    // Setup the write moniker
+    // Setup the write moniker - I64 Array Example
+    // std::cout << "Setup Write Moniker" << std::endl;
+    // ::grpc::ClientContext begin_write_array_i64_context;
+    // auto begin_write_array_i64_request = BeginWriteArrayI64Request{};
+    // begin_write_array_i64_request.mutable_session()->CopyFrom(fpga_task);
+    // begin_write_array_i64_request.set_control(EXAMPLE_ARRAY_CONTROL);
+    // auto begin_write_array_i64_response = BeginWriteArrayI64Response{};
+    // raise_if_error(
+    //   fpga_client.BeginWriteArrayI64(&begin_write_array_i64_context, begin_write_array_i64_request, &begin_write_array_i64_response),
+    //   begin_write_array_i64_context);
+    //auto fpga_write_array_i64moniker = new ni::data_monikers::Moniker(begin_write_array_i64_response.moniker());
+
+
+    // Setup the write moniker - U8 Example
     std::cout << "Setup Write Moniker" << std::endl;
-    ::grpc::ClientContext begin_write_array_i64_context;
-    auto begin_write_array_i64_request = BeginWriteArrayI64Request{};
-    begin_write_array_i64_request.mutable_session()->CopyFrom(fpga_task);
-    begin_write_array_i64_request.set_control(EXAMPLE_ARRAY_CONTROL);
-    auto begin_write_array_i64_response = BeginWriteArrayI64Response{};
+    ::grpc::ClientContext begin_write_u8_context;
+    auto begin_write_u8_request = BeginWriteU8Request{};
+    begin_write_u8_request.mutable_session()->CopyFrom(fpga_task);
+    begin_write_u8_request.set_control(EXAMPLE_CONTROL);
+    auto begin_write_u8_response = BeginWriteU8Response{};
     raise_if_error(
-      fpga_client.BeginWriteArrayI64(&begin_write_array_i64_context, begin_write_array_i64_request, &begin_write_array_i64_response),
-      begin_write_array_i64_context);
-    auto fpga_write_array_i64moniker = new ni::data_monikers::Moniker(begin_write_array_i64_response.moniker());
+      fpga_client.BeginWriteU8(&begin_write_u8_context, begin_write_u8_request, &begin_write_u8_response),
+      begin_write_u8_context);
+    auto fpga_write_u8_moniker = new ni::data_monikers::Moniker(begin_write_u8_response.moniker());
 
     //Setup Sideband Stream
     grpc::ClientContext moniker_context;
@@ -197,7 +219,7 @@ int main(int argc, char **argv)
     ni::data_monikers::BeginMonikerSidebandStreamResponse sideband_response;
     sideband_request.set_strategy(ni::data_monikers::SidebandStrategy::SOCKETS_LOW_LATENCY);
     sideband_request.mutable_monikers()->mutable_read_monikers()->AddAllocated(fpga_read_array_i64moniker);
-    sideband_request.mutable_monikers()->mutable_write_monikers()->AddAllocated(fpga_write_array_i64moniker);
+    sideband_request.mutable_monikers()->mutable_write_monikers()->AddAllocated(fpga_write_u8_moniker);
     auto write_stream = moniker_service.BeginSidebandStream(&moniker_context, sideband_request, &sideband_response);
     if(!write_stream.ok()) {
        std::cout << "ERROR BeginSidebandStream: (" << write_stream.error_code() << ") " << write_stream.error_message() << std::endl;
@@ -209,11 +231,16 @@ int main(int argc, char **argv)
     //Read data and write data
     for (int i = 0; i < NUM_ITERATIONS; i++) {
       ni::data_monikers::MonikerReadResponse read_data_result;
-      nifpga_grpc::MonikerWriteArrayI64Request write_values_array_i64;
+      //nifpga_grpc::MonikerWriteArrayI64Request write_values_array_i64; //Use this to write array values if needed
+      nifpga_grpc::MonikerWriteU8Request write_values_u8;
       ni::data_monikers::SidebandWriteRequest sideband_request;
 
-      write_values_array_i64.mutable_array()->Add(write_data_i64.begin(), write_data_i64.end());
-      sideband_request.mutable_values()->add_values()->PackFrom(write_values_array_i64);
+      //Use this to write array values if needed
+      // write_values_array_i64.mutable_array()->Add(write_data_i64.begin(), write_data_i64.end());
+      // sideband_request.mutable_values()->add_values()->PackFrom(write_values_array_i64);
+      write_values_u8.set_value(write_data_u8);
+      sideband_request.mutable_values()->add_values()->PackFrom(write_values_u8);
+      
 
       WriteSidebandMessage(sideband_token, sideband_request);
        std::cout << "Write Sideband Message done" << std::endl;
@@ -241,6 +268,7 @@ int main(int argc, char **argv)
     ::grpc::ClientContext fpga_close_context;
     CloseRequest close_request;
     close_request.mutable_session()->CopyFrom(fpga_task);
+    close_request.set_attribute(CloseAttribute::CLOSE_ATTRIBUTE_UNSPECIFIED);
     CloseResponse close_response;
     raise_if_error(
       fpga_client.Close(&fpga_close_context, close_request, &close_response),
